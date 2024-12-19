@@ -3,10 +3,11 @@ from .datatypes import TypeDescr
 import struct
 from collections.abc import Generator
 from io import BytesIO
-from types import CodeType, FunctionType
+from types import CodeType, FunctionType, BuiltinFunctionType
 import typing
 import importlib
 import copyreg
+
 # Loaders for each type
 
 
@@ -48,6 +49,7 @@ def _load_sequence(stream: typing.IO) -> Generator[object, None, None]:
     items = []
     for _ in range(l):
         yield (load(stream))
+
 
 def _load_bool(stream: typing.IO) -> bool:
     b = stream.read(1)
@@ -110,15 +112,19 @@ def _load_type(stream: typing.IO) -> type:
     return getattr(module, qualname)
 
 
-
 def _load_object(stream: typing.IO) -> object:
-    reconstructor=load(stream) or copyreg._reconstructor
-    rec_args=tuple(_load_sequence(stream))
-    dct = load(stream)
+    reconstructor = load(stream) or copyreg._reconstructor
+    print(reconstructor)
+    rec_args = tuple(_load_sequence(stream))
+    state = load(stream)
     obj = reconstructor(*rec_args)
-    if dct is not None:
-        obj.__dict__ = dct
+    if state is not None:
+        if hasattr(obj, "__setstate__"):
+            obj.__setstate__(state)
+        else:
+            obj.__dict__ = state
     return obj
+
 
 def load(stream: typing.IO) -> object:
     td_byte = stream.read(1)[0]
@@ -149,5 +155,6 @@ LOADERS = {
     TypeDescr.FUNC: _load_function,
     TypeDescr.TYPE: _load_type,
     TypeDescr.OBJ: _load_object,
+    TypeDescr.BLTIN_FUNC: _load_type, #tmp
     TypeDescr.MEMVIEW: _load_memoryview,
 }

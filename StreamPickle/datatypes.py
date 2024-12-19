@@ -18,4 +18,6 @@ class TypeDescr(enum.Enum):
     NONE = 13
     MAPPROXY = 14
     MEMVIEW = 15
+    BARR=16
+    BLTIN_FUNC=17
     OBJ = 255
